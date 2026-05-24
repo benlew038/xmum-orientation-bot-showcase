@@ -21,7 +21,7 @@ from collections import defaultdict
 
 import asyncio
 
-RESET_SEMAPHORE = asyncio.Semaphore(5)  # 同时最多 3 个 reset 在跑
+RESET_SEMAPHORE = asyncio.Semaphore(5)  
 GROUP_UPDATE_SEMAPHORE = asyncio.Semaphore(2)
 AUTH_WRITE_SEMAPHORE = asyncio.Semaphore(1)
 GROUP_LOCKS = defaultdict(asyncio.Lock)
@@ -106,13 +106,13 @@ AUTH_INDEX = {}
 COINS_CACHE_LOCK = asyncio.Lock()
 COINS_CACHE = {}
 COINS_CACHE_TIME = 0
-COINS_CACHE_TTL = 30   # 秒
+COINS_CACHE_TTL = 30  
 GROUP_INFO_CACHE = {}
 GROUP_INFO_CACHE_LOCK = asyncio.Lock()
 LOG_LOCK = asyncio.Lock()
 LOG_BUFFER = []
 LOG_LAST_FLUSH = 0
-LOG_FLUSH_INTERVAL = 5  # 秒
+LOG_FLUSH_INTERVAL = 5  
 LOGS_CACHE = []
 LOGS_CACHE_TIME = 0
 LOGS_CACHE_TTL = 10
@@ -123,23 +123,22 @@ ATTENDANCE_SIGNED = {
 }
 ATTENDANCE_LOCK = asyncio.Lock()
 ATTENDANCE_QUEUE = None
-ATTENDANCE_BATCH_WINDOW = 1.0      # 收集 1 秒
-ATTENDANCE_BATCH_MAX = 25          # 每批最多 20 条
+ATTENDANCE_BATCH_WINDOW = 1.0     
+ATTENDANCE_BATCH_MAX = 25         
 ATTENDANCE_RETRY_MAX = 3
-ATTENDANCE_RETRY_BACKOFF = 2       # 429 等待秒数
+ATTENDANCE_RETRY_BACKOFF = 2      
 ATTENDANCE_CACHE = []
 ATTENDANCE_CACHE_TIME = 0
 ATTENDANCE_CACHE_TTL = 10
 ATTENDANCE_CACHE_LOCK = asyncio.Lock()
 ATTENDANCE_WRITE_SEMAPHORE = asyncio.Semaphore(1)
 
-# ---- 新增全局写队列与参数 ----
 WRITE_QUEUE = None
-WRITE_BATCH_WINDOW = 0.5   # 收集写请求的时间窗口（秒）
-WRITE_BATCH_MAX = 50       # 单次最多合并多少个 group 写入
+WRITE_BATCH_WINDOW = 0.5  
+WRITE_BATCH_MAX = 50       
 COINS_WRITE_SEMAPHORE = asyncio.Semaphore(1)
 WRITE_RETRY_MAX = 3
-WRITE_RETRY_BACKOFF = 0.5  # base backoff 秒
+WRITE_RETRY_BACKOFF = 0.5  
 WRITE_RATE_PER_SEC = 3.0
 WRITE_INTERVAL = 1 / WRITE_RATE_PER_SEC
 GLOBAL_APP = None
@@ -148,8 +147,7 @@ TELEGRAM_SEMAPHORE = asyncio.Semaphore(25)
 LOG_WRITE_SEMAPHORE = asyncio.Semaphore(1)
 LOGIN_SEMAPHORE = asyncio.Semaphore(25)
 TELEGRAM_QUEUE = asyncio.Queue()
-TELEGRAM_RATE = 20   # 每秒最多20条
-
+TELEGRAM_RATE = 20   
 TX_REGISTRY = {}
 UNDONE_TX = set()
 UNDO_LOCK = asyncio.Lock()  
@@ -160,18 +158,16 @@ UNDO_LOCK = asyncio.Lock()
 
 UPDATE_QUEUE = asyncio.Queue()
 
-UPDATE_BATCH_WINDOW = 0.5      # 0.5秒收集
-UPDATE_BATCH_MAX = 50          # 一次最多50个更新
-UPDATE_WRITE_RATE = 4          # 每秒最多4次写（安全值）
+UPDATE_BATCH_WINDOW = 0.5   
+UPDATE_BATCH_MAX = 50          
+UPDATE_WRITE_RATE = 4          
 
 LAST_UPDATE_WRITE = 0
 
 from telegram.error import BadRequest
 
 async def safe_answer(query, text=None):
-    """
-    安全 answer callback（避免 Query too old）
-    """
+
     try:
         if text:
             await query.answer(text)
@@ -183,12 +179,12 @@ async def safe_answer(query, text=None):
 async def cache_health_check():
     """Periodically check cache health, auto-refresh if needed"""
     while True:
-        await asyncio.sleep(300)  # Check every 5 minutes
+        await asyncio.sleep(300)  
         
         now = time.time()
         
         # Check AUTH cache
-        if now - AUTH_CACHE_TIME > AUTH_CACHE_TTL * 0.8:  # Refresh at 80% of TTL
+        if now - AUTH_CACHE_TIME > AUTH_CACHE_TTL * 0.8:  
             print("🔄 Auto-refreshing AUTH cache...")
             await get_auth_records_async()
         
@@ -273,9 +269,6 @@ async def load_group_info_cache():
         GROUP_INFO_CACHE.clear()
         GROUP_INFO_CACHE.update(cache)
 
-# In post_init add:
-# app.bot_data["health_checker"] = asyncio.create_task(cache_health_check())
-
 async def post_init(app: Application):
     global WRITE_QUEUE, GLOBAL_APP, ATTENDANCE_QUEUE
 
@@ -348,7 +341,7 @@ async def update_group_write_worker():
 
         updates = []
 
-        # ✅ 关键：记录 batch 内最新值
+        # 记录 batch 内最新值
         batch_vals = {(g, f): v for g, f, v in batch}
 
         for group, field, value in batch:
@@ -360,7 +353,6 @@ async def update_group_write_worker():
                 "values": [[value]]
             })
 
-            # ✅ 正确 total 计算（不会错）
             if field in ("intl", "local"):
 
                 async with GROUP_INFO_CACHE_LOCK:
@@ -390,7 +382,6 @@ async def update_group_write_worker():
         for _ in range(len(batch)):
             UPDATE_QUEUE.task_done()
     
-# Add this function near other cache functions
 async def get_attendance_records_cached():
     """
     Get attendance records with caching to avoid repeated full table scans
@@ -421,12 +412,11 @@ async def warmup_all_caches():
         print("🔥 Starting cache warmup...")
         start_time = time.time()
         
-        # 1️⃣ Warm up AUTH cache (most important)
         print("  📚 Loading auth data...")
         await get_auth_records_async()
         print(f"  ✅ AUTH cache ready: {len(AUTH_INDEX)} records")
         
-        # 2️⃣ Warm up COINS cache
+        # Warm up COINS cache
         print("  💰 Loading coins data...")
         records = await asyncio.to_thread(coins_sheet.get_all_records)
         async with COINS_CACHE_LOCK:
@@ -435,22 +425,22 @@ async def warmup_all_caches():
             COINS_CACHE_TIME = time.time()
         print(f"  ✅ COINS cache ready: {len(COINS_CACHE)} groups")
         
-        # 3️⃣ Warm up COIN_ROW_MAP
+        # Warm up COIN_ROW_MAP
         print("  🗺️  Loading row mapping...")
         await asyncio.to_thread(load_coin_map)
         print(f"  ✅ Row map ready: {len(COIN_ROW_MAP)} groups")
 
-        # 3.5️⃣ Warm up GROUP INFO cache
+        #  Warm up GROUP INFO cache
         print("  📦 Loading group info...")
         await load_group_info_cache()
         print(f"  ✅ GROUP INFO cache ready: {len(GROUP_INFO_CACHE)} groups")
         
-        # 4️⃣ Warm up ATTENDANCE cache
+        # Warm up ATTENDANCE cache
         print("  📋 Loading attendance records...")
         await get_attendance_records_cached()  # Make sure to use your cached version
         print(f"  ✅ ATTENDANCE cache ready")
         
-        # 5️⃣ Warm up LOGS cache
+        # Warm up LOGS cache
         print("  📊 Loading logs...")
         global LOGS_CACHE, LOGS_CACHE_TIME
         LOGS_CACHE = await asyncio.to_thread(logs_sheet.get_all_records)
@@ -487,7 +477,6 @@ async def get_logs_cached():
         return records
 
 async def post_shutdown(app: Application):
-    # 等待签到队列写完
     if ATTENDANCE_QUEUE:
         await ATTENDANCE_QUEUE.join()
 
@@ -530,7 +519,6 @@ async def add_log_async(operator_name, operator_role, target, action, before, af
     async with LOG_LOCK:
         LOG_BUFFER.append([now, operator_name, operator_role, target, action, before, after])
         t = time.time()
-        # 决定是否立即 flush：按你原意保留条件
         if len(LOG_BUFFER) >= 10 or t - LOG_LAST_FLUSH >= LOG_FLUSH_INTERVAL:
             rows = LOG_BUFFER.copy()
             LOG_BUFFER.clear()
@@ -539,7 +527,6 @@ async def add_log_async(operator_name, operator_role, target, action, before, af
                 async with LOG_WRITE_SEMAPHORE:
                     await asyncio.to_thread(logs_sheet.append_rows, rows)
             except Exception as e:
-                # 遇错把 rows 放回 buffer（防丢）并记录错误（打印或另做处理）
                 LOG_BUFFER = rows + LOG_BUFFER
                 LOG_LAST_FLUSH = 0
                 print("add_log_async append_rows failed:", e)
@@ -610,7 +597,6 @@ async def undo_transaction(context, tx_id):
                 }
             ))
 
-        # 🔥 delta 用 after-before 算
         delta = after - before
 
         await add_log_async(
@@ -637,7 +623,7 @@ async def coin_write_worker():
     last_write_ts = 0.0
 
     while True:
-        got = 0   # ✅ 新增：记录 get() 次数
+        got = 0  
 
         group, value, meta = await WRITE_QUEUE.get()
         got += 1
@@ -646,25 +632,22 @@ async def coin_write_worker():
         start = asyncio.get_event_loop().time()
 
         try:
-            # ① 收集 batch
             while True:
                 timeout = WRITE_BATCH_WINDOW - (asyncio.get_event_loop().time() - start)
                 if timeout <= 0 or len(pending) >= WRITE_BATCH_MAX:
                     break
                 try:
                     g, v, m = await asyncio.wait_for(WRITE_QUEUE.get(), timeout)
-                    got += 1                      # ✅ 每 get 一次就 +1
+                    got += 1                     
                     pending[g] = (v, m)
                 except asyncio.TimeoutError:
                     break
 
-            # ② 控速
             now = asyncio.get_event_loop().time()
             sleep_time = WRITE_INTERVAL - (now - last_write_ts)
             if sleep_time > 0:
                 await asyncio.sleep(sleep_time)
 
-            # ③ 写 Sheets
             if not COIN_ROW_MAP:
                 await asyncio.to_thread(load_coin_map)
 
@@ -704,7 +687,6 @@ async def coin_write_worker():
                     pass
 
         finally:
-            # ✅ 用 got，而不是 len(pending)
             for _ in range(got):
                 WRITE_QUEUE.task_done()
 
@@ -718,7 +700,6 @@ async def attendance_write_worker():
         batch = [first]
         start = asyncio.get_event_loop().time()
 
-        # 收集窗口内的更多签到
         while len(batch) < ATTENDANCE_BATCH_MAX:
             timeout = ATTENDANCE_BATCH_WINDOW - (
                 asyncio.get_event_loop().time() - start
@@ -734,7 +715,6 @@ async def attendance_write_worker():
             except asyncio.TimeoutError:
                 break
 
-        # ===== 写入逻辑 =====
         success = False
 
         for attempt in range(ATTENDANCE_RETRY_MAX):
@@ -756,7 +736,7 @@ async def attendance_write_worker():
                     print("attendance worker error:", e)
                     break
 
-        # ===== fallback =====
+        # fallback
         if not success:
             print("⚠ Fallback to single writes")
 
@@ -784,7 +764,6 @@ async def get_auth_records_async():
 
     now = time.time()
 
-    # cache 命中
     if AUTH_CACHE and now - AUTH_CACHE_TIME < AUTH_CACHE_TTL:
         return AUTH_CACHE
 
@@ -803,7 +782,6 @@ async def get_auth_records_async():
             if any(row)
         ]
 
-        # 🔥 同步构建 O(1) login 索引
         global AUTH_INDEX
         AUTH_INDEX = {
             str(r["Password"]).strip().lstrip("'"): r
@@ -821,7 +799,6 @@ def now_my_str():
 async def search_user_by_name_async(keyword):
     keyword = keyword.lower().strip().split()
 
-    # ✅ 用 async + cache
     records = await get_auth_records_async()
     matches = []
 
@@ -871,7 +848,6 @@ async def get_coins_async(group):
         return COINS_CACHE.get(int(group), 0)
 
     async with COINS_CACHE_LOCK:
-        # double-check
         if COINS_CACHE and time.time() - COINS_CACHE_TIME < COINS_CACHE_TTL:
             return COINS_CACHE.get(int(group), 0)
 
@@ -884,12 +860,10 @@ async def update_coins_async(group, new_amount, user_id=None):
 
     global COINS_CACHE, COINS_CACHE_TIME
 
-    # 更新 cache
     async with COINS_CACHE_LOCK:
         COINS_CACHE[int(group)] = int(new_amount)
         COINS_CACHE_TIME = time.time()
 
-    # 禁止 fallback（必须走 queue）
     if WRITE_QUEUE is None:
         raise RuntimeError("WRITE_QUEUE not initialized")
 
@@ -1030,14 +1004,10 @@ async def notify_faci_group(app, text):
         0
     ))
 
-# =========================
-# TELEGRAM RATE LIMITER (STABLE VERSION)
-# =========================
-
 class TelegramRateLimiter:
     def __init__(self, rate=20):
-        self.rate = rate              # 每秒最大消息数
-        self.tokens = rate            # 初始令牌
+        self.rate = rate         
+        self.tokens = rate         
         self.updated_at = time.time()
         self.lock = asyncio.Lock()
 
@@ -1102,9 +1072,8 @@ async def telegram_send_worker():
             TELEGRAM_QUEUE.task_done()
 
 async def do_reset_logic(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    async with RESET_SEMAPHORE:  # 🔒 同时最多 5 个 reset
+    async with RESET_SEMAPHORE: 
         try:
-            # ⚠️ 只在这里清 user_data
             for k in [
                 "search_name_mode",
                 "awaiting_password",
@@ -1115,7 +1084,6 @@ async def do_reset_logic(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]:
                 context.user_data.pop(k, None)
 
-            # 不检查 Telegram_ID
             context.user_data["search_name_mode"] = True
 
             await update.message.reply_text(
@@ -1136,18 +1104,13 @@ async def reset_password_start(update: Update, context: ContextTypes.DEFAULT_TYP
         )
         return
 
-    # ✅ 只回应一次（防 Telegram timeout）
     await update.message.reply_text(
         "🔄 Reset request received.\nPlease wait..."
     )
 
-    # ✅ 丢后台一次（由 semaphore 控制）
     asyncio.create_task(do_reset_logic(update, context))
     
 async def _update_telegram_id_bg(name, tg_id):
-    """
-    后台静默写入 Telegram_ID，不阻塞登录 UI
-    """
     async with AUTH_WRITE_SEMAPHORE:
         def find_and_update():
             cell = auth_sheet.find(name)
@@ -1160,7 +1123,7 @@ async def _update_telegram_id_bg(name, tg_id):
 
 async def process_login(update, context, password):
     async with LOGIN_SEMAPHORE:
-        user = await get_user_by_password_async(password)  # ✅ O(1) index
+        user = await get_user_by_password_async(password)  
 
         if not user:
             context.user_data["awaiting_password"] = True
@@ -1173,7 +1136,6 @@ async def process_login(update, context, password):
             if k not in ["role", "group", "name", "is_proxy"]:
                 context.user_data.pop(k, None)
 
-        # ✅ 建立 session（立刻完成）
         context.user_data["role"] = user["role"]
         context.user_data["group"] = user["group"]
         context.user_data["name"] = user["name"]
@@ -1181,12 +1143,10 @@ async def process_login(update, context, password):
 
         telegram_id = update.effective_user.id
 
-        # ✅ 后台写 Telegram_ID（fire-and-forget）
         asyncio.create_task(
             _update_telegram_id_bg(user["name"], telegram_id)
         )
 
-        # ✅ UI 立刻返回（不等 Sheets）
         menu = get_menu_by_role(user["role"])
         await update.message.reply_text(
             f"🦢 Honk Honk!\n🎉 Welcome {user['role']} {user['name']}",
@@ -1445,20 +1405,12 @@ async def process_day2_pk(context, win, lose, tx_id):
     await notify_faci_group(context.application, summary_faci)
 
 async def process_manual_coins(update, context, group, change):
-    """
-    现在做三件事：
-    1) 更新内存 COINS_CACHE（加锁）
-    2) enqueue 最新的 group value 到 WRITE_QUEUE
-    3) 写 log（通过 add_log_async, 本身是异步批写）
-    这个函数会很快完成（不等待 Sheets）。
-    """
+    
     global COINS_CACHE, COINS_CACHE_TIME
 
-    # 1) 更新本地 cache（乐观更新）
     async with COINS_CACHE_LOCK:
         current = COINS_CACHE.get(int(group))
         if current is None:
-            # 如果 cache 没有，强制读取一次（blocking in thread，但不会太慢）
             records = await asyncio.to_thread(coins_sheet.get_all_records)
             COINS_CACHE = {int(r["Group"]): int(r["Atlantis Coins"]) for r in records}
             COINS_CACHE_TIME = time.time()
@@ -1479,7 +1431,6 @@ async def process_manual_coins(update, context, group, change):
         COINS_CACHE[int(group)] = int(after)
         COINS_CACHE_TIME = time.time()
 
-    # 2) enqueue the write (worker will batch)
     await WRITE_QUEUE.put((
         group,
         after,
@@ -1492,7 +1443,6 @@ async def process_manual_coins(update, context, group, change):
         }
     ))
 
-    # 3) log (still async, uses your add_log_async)
     await add_log_async(
         context.user_data.get("name", ""),
         context.user_data.get("role", ""),
@@ -1502,13 +1452,11 @@ async def process_manual_coins(update, context, group, change):
         after
     )
 
-    # done quickly; caller can respond immediately
 
 def process_update_group_info_sync(context, group, field, value):
     row = group + 1
     col = FIELD_COLUMN[field]
 
-    # ① 只读「被改的那一格」（用于 before）
     try:
         before = sheet.acell(f"{col}{row}").value
     except Exception:
@@ -1521,7 +1469,6 @@ def process_update_group_info_sync(context, group, field, value):
         }
     ]
 
-    # ② 仅当需要 total，才读另外一个值
     if field in ("intl", "local"):
         try:
             if field == "intl":
@@ -1531,14 +1478,13 @@ def process_update_group_info_sync(context, group, field, value):
                 intl = sheet.acell(f"C{row}").value or 0
                 total = int(value) + int(intl)
         except Exception:
-            total = value  # fallback
+            total = value  
 
         updates.append({
             "range": f"E{row}",
             "values": [[total]]
         })
 
-    # ③ 一次 batch_update
     sheet.batch_update(updates)
 
     return before, value
@@ -1562,7 +1508,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
 
     if update.message.text == "/fake_click_attendance_check":
-    # ⚠️ 直接复用 attendance_check_facis 的逻辑
         fake_query = type("obj", (), {})()
         fake_query.data = "attendance_check_facis"
         fake_query.message = update.message
@@ -1632,7 +1577,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await process_login(update, context, text)
         return
 
-    # ===== BUTTON REPLY MODE =====
     if context.user_data.get("reply_mode"):
         auth_records = await get_auth_records_async()
 
@@ -1647,19 +1591,16 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         text = update.message.text.strip()
 
-        # ❌ cancel
         if text.lower() == "cancel":
             context.user_data.pop("reply_mode", None)
             context.user_data.pop("reply_target", None)
             await update.message.reply_text("❎ Reply cancelled.")
             return
 
-        # 🚫 未登录
         if not context.user_data.get("role"):
             await update.message.reply_text("❌ Please /start and login.")
             return
 
-        # ✅ 正式发送 reply
         sender_id = context.user_data["reply_target"]
         faci_name = context.user_data.get("name", "Facilitator")
 
@@ -1690,7 +1631,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✅ Reply sent.")
         return
 
-    # ✅ 一定要有（全局 text）
     text = update.message.text.strip()
 
     # ===== ADMIN TOGGLE RESET MODE =====
@@ -1727,7 +1667,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # 正确 → 进入新密码阶段
         context.user_data.pop("awaiting_old_password")
         context.user_data["awaiting_new_password"] = True
 
@@ -1771,7 +1710,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # ✅ 写入新密码
         async with AUTH_WRITE_SEMAPHORE:
             await asyncio.to_thread(auth_sheet.update, range_name=f"C{row}", values=[[f"'{new_pass_clean}"]])
 
@@ -1788,13 +1726,8 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ===== ATTENDANCE OTP MODE =====
-
-    # ===== ATTENDANCE OTP MODE =====
-
     if context.user_data.get("attendance_mode"):
 
-        # 🚫 proxy 不允许
         if context.user_data.get("is_proxy"):
             await update.message.reply_text(
                 "❌ This account is for game testing and cannot take attendance."
@@ -1805,7 +1738,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         role = context.user_data["role"]
         otp_input = update.message.text.strip()
 
-        # ========= 校验 OTP =========
 
         if role in ["Facilitators", "Facis and Freshies (Game Test)"]:
             if not FACI_OTP or time.time() > FACI_OTP_EXPIRE:
@@ -1844,15 +1776,11 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         key = (att_type, identifier)
 
-        # ========= Step 1：快速 RAM 检查（短锁） =========
         async with ATTENDANCE_LOCK:
             if key in ATTENDANCE_SIGNED[att_type]:
                 await update.message.reply_text("⚠️ Attendance already marked.")
                 context.user_data.pop("attendance_mode", None)
                 return
-
-        # ========= Step 2：RAM miss → Sheets 保底检查（无锁慢操作） =========
-        # 只会发生在 bot 重启后或 session 刚开始
 
         records = await get_attendance_records_cached()
 
@@ -1870,7 +1798,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 break
 
         if already:
-            # 回填 RAM（短锁）
             async with ATTENDANCE_LOCK:
                 ATTENDANCE_SIGNED[att_type].add(key)
                 ATTENDANCE_INDEX[att_type].append({
@@ -1882,7 +1809,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.pop("attendance_mode", None)
             return
 
-        # ========= Step 3：真正允许签到（短锁写 RAM） =========
         async with ATTENDANCE_LOCK:
             if key in ATTENDANCE_SIGNED[att_type]:
                 await update.message.reply_text("⚠️ Attendance already marked.")
@@ -1895,7 +1821,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "time": time.time()
             })
 
-        # ========= Step 4：写入 Sheets（限流 + retry） =========
         now_str = datetime.now(MY_TZ).strftime("%Y-%m-%d %H:%M:%S")
 
         await ATTENDANCE_QUEUE.put(
@@ -1919,12 +1844,10 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "⏳ Ranking recorded.\nPlease wait..."
             )
 
-            # ✅ 丢后台
             asyncio.create_task(
                 process_rank_coins(context, rank, group)
             )
 
-            # ✅ 立刻清状态
             context.user_data.pop("coin_mode", None)
 
         except:
@@ -1940,17 +1863,12 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             change = int(text)
             group = context.user_data["edit_group"]
 
-            # ✅ 清状态（先清，避免重复触发）
             context.user_data.pop("coin_mode", None)
             context.user_data.pop("edit_group", None)
 
-            # ✅ 告诉 user 正在处理
             await update.message.reply_text("⏳ Updating coins...")
 
-            # ✅ 等待执行（关键改动）
             await process_manual_coins(update, context, group, change)
-
-            # ✅ 成功才回主菜单
             menu = get_menu_by_role(context.user_data["role"])
             await update.message.reply_text(
                 "✅ Coins updated successfully.",
@@ -1976,15 +1894,12 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         commenter = context.user_data["bf_commenter"]
 
         try:
-            # 找 Facilitator row
             cell = await asyncio.to_thread(best_faci_sheet.find, faci)
             row = cell.row
 
-            # 找 commenter column
             headers = await asyncio.to_thread(best_faci_sheet.row_values, 1)
             col = headers.index(commenter) + 1
-
-            # overwrite 写入
+            
             await asyncio.to_thread(best_faci_sheet.update_cell, row, col, comment)
 
             context.user_data.pop("bf_mode")
@@ -2003,11 +1918,10 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return
     
-# ===== MESSAGE FACI MODE (GROUP / ALL) =====
     if context.user_data.get("msg_mode"):
         auth_records = await get_auth_records_async()
         message = update.message.text
-        target = context.user_data["msg_group"]   # int 或 "ALL"
+        target = context.user_data["msg_group"] 
 
         sender_role = context.user_data["role"]
         sender_name = context.user_data["name"]
@@ -2015,8 +1929,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sender_id = update.effective_user.id
 
     
-
-        # 🔹 选择接收对象
         if target == "ALL":
             action = "MSG_ALL_FACI"
             log_target = "Facilitators (ALL)"
@@ -2039,7 +1951,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         targets = [r for r in all_facis if r.get("Telegram_ID")]
         missing = [r["Name"] for r in all_facis if not r.get("Telegram_ID")]
 
-        # 🔹 Header
         if sender_group:
             header = (
                 f"‼️ ALERT ‼️\n"
@@ -2051,7 +1962,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📩 Message from {sender_role} {sender_name}:"
             )
 
-        # 🔹 发送（带 reply metadata）
         for i,t in enumerate(targets):
             keyboard = InlineKeyboardMarkup([
                 [InlineKeyboardButton("✉ Reply", callback_data=f"reply_to_{sender_id}")]
@@ -2066,7 +1976,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         after_text = message.strip()
         after_text = after_text[:60] + "..." if len(after_text) > 60 else after_text
-        # ✅ 写 message log（只写一次）
 
         await add_log_async(
             sender_name,
@@ -2077,7 +1986,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             after_text
         )
 
-        # ⚠️ Log must be written BEFORE clearing msg_mode
         context.user_data.pop("msg_mode", None)
         context.user_data.pop("msg_group", None)
 
@@ -2099,13 +2007,11 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         return
     
-    # ========= IF UPDATING FIELD =========
     if "updating_field" in context.user_data:
 
         field = context.user_data["updating_field"]
         group = int(context.user_data["target_group"])
 
-        # ===== 输入验证 =====
         if field in ["intl", "local"]:
             try:
                 value = int(text)
@@ -2122,14 +2028,11 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         try:
-            # 1️⃣ 清状态
             context.user_data.pop("updating_field", None)
             context.user_data.pop("target_group", None)
 
-            # 2️⃣ UI 提示
             await update.message.reply_text("⏳ Updating group info...")
 
-            # 3️⃣ 更新 CACHE
             async with GROUP_INFO_CACHE_LOCK:
 
                 g = GROUP_INFO_CACHE.get(group)
@@ -2159,11 +2062,9 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     elif field == "foundation":
                         g["foundation"] = value
 
-            # 4️⃣ 入队写 Sheets
             async with GROUP_LOCKS[group]:
                 await UPDATE_QUEUE.put((group, field, value))
 
-            # 5️⃣ 写日志
             await add_log_async(
                 context.user_data.get("name", ""),
                 context.user_data.get("role", ""),
@@ -2173,7 +2074,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 value
             )
 
-            # 6️⃣ 返回最新 summary（来自 cache）
             summary = await build_group_summary_from_cache(group)
 
             await update.message.reply_text(
@@ -2190,9 +2090,6 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
         return
-
-    # ========= OTHERWISE → LOGIN =========
-    # ========= LOGIN MODE =========
     
 
 async def logout(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2621,7 +2518,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             auth_records = await get_auth_records_async()
             group = int(action.split("_")[-1])
 
-            # 从 AUTH 抓该组 facilitators 名字
             faci_names = [
                 r["Name"]
                 for r in auth_records
@@ -2630,7 +2526,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             names_text = ", ".join(faci_names) if faci_names else "No facilitators found"
 
-            # 🚫 如果这个 group 没有 facilitator，直接挡掉
             if not faci_names:
                 await query.edit_message_text(
                     f"❌ No facilitators found in Group {group}.",
@@ -2695,7 +2590,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             headers = await asyncio.to_thread(best_faci_sheet.row_values, 1)
 
-            commenters = headers[2:]  # 从第3列开始（HOF_xxx / OC_xxx）
+            commenters = headers[2:]  
 
             keyboard = []
             row = []
@@ -2752,8 +2647,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
             role = context.user_data["role"]
-
-            # 👉 Admin 要先选 group
+            
             if role in ["Advisor", "OC", "HOF", "HOGM"]:
 
                 keyboard = []
@@ -2776,7 +2670,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
                 return
 
-            # 👉 非 admin（Faci）直接用自己 group
             context.user_data["target_group"] = context.user_data["group"]
 
             submenu = get_update_submenu()
@@ -2786,8 +2679,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-
-        # ================= SELECT FIELD =================
         if action.startswith("field_"):
             field = action.replace("field_", "")
             context.user_data["updating_field"] = field
@@ -2800,7 +2691,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             return
 
-        # ================= FACI CHECK OWN COINS =================
         if action == "check_my_coins":
 
             group = context.user_data["group"]
@@ -2813,7 +2703,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=menu
             )
             return
-
 
         # ================= GM EDIT COINS MANUAL =================
         if action == "edit_coins":
@@ -2871,7 +2760,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await query.edit_message_text("❌ You don't have permission.")
                 return
 
-            # 触发 cache 加载
             await get_coins_async(1)
 
             records = [
@@ -2983,8 +2871,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # ===== SELECT WINNER =====
-
         if action.startswith("pk_win_"):
 
             state = FLOW_STATE["day2"].get(user_id)
@@ -3019,9 +2905,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
             return
-        
-
-        # ===== SELECT LOSER =====
 
         if action.startswith("pk_lose_"):
 
@@ -3048,7 +2931,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(summary, reply_markup=keyboard)
             return
 
-        # ===== APPLY COINS AFTER GROUP SELECT =====
 
         if action == "view_logs":
 
@@ -3058,7 +2940,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             text = "📊 Recent Logs:\n\n"
 
-            for r in records[-30:]:   # last 10 only
+            for r in records[-30:]:   
                 text += (
                     f"{r['Timestamp']} | {r['Operator']} ({r['Operator Role']})\n"
                     f"{r['Target']} | {r['Action']} : {r['Before']} → {r['After']}\n\n"
@@ -3069,25 +2951,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await safe_edit(query, text, reply_markup=menu)
             return
         
-
-        # ================= PLACEHOLDER =================
         await query.edit_message_text("⚠ Unknown action.")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     user_id = update.effective_user.id
 
-    # 🔥 1️⃣ 强制清空所有 session 状态
     context.user_data.clear()
 
-    # 🔥 2️⃣ 清理全局 flow（避免 ranking 残留）
     FLOW_STATE["day1"].pop(user_id, None)
     FLOW_STATE["day2"].pop(user_id, None)
 
-    # 🔥 3️⃣ 生成新的 UI version（防旧按钮）
     context.user_data["_ui_version"] = str(time.time())
-
-    # 🔥 4️⃣ 强制重新登录
     context.user_data["awaiting_password"] = True
 
     await update.message.reply_text(
@@ -3095,16 +2970,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🦢 Honk Honk!\n"
         "🔐 Please enter your password:"
     )
-# =====================
-# Main
-# =====================
+
 def main():
     from telegram.ext import CallbackQueryHandler
 
     app = (
         Application.builder()
         .token(BOT_TOKEN)
-        .post_init(post_init)   # 👈 关键
+        .post_init(post_init)  
         .build()
     )
     
@@ -3114,7 +2987,6 @@ def main():
     app.add_handler(CommandHandler("refresh_cache", refresh_cache))
     app.add_handler(CallbackQueryHandler(button_handler))
 
-    # 👇 普通文字当 login
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_handler))
 
     app.add_handler(CommandHandler("id", show_telegram_id))
