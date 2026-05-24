@@ -273,25 +273,37 @@ python main.py
 
 ## Telegram Bot Interface
 
-_Add screenshots here_
+<img width="483" height="612" alt="image" src="https://github.com/user-attachments/assets/5d452e32-1c6d-4f77-a35b-d0f0f2f00ece" />
+
+<img width="558" height="702" alt="image" src="https://github.com/user-attachments/assets/e7e6e3ea-decc-47db-a99e-5b779f1d7c9c" />
 
 ---
 
 ## Atlantis Coin Management
 
-_Add screenshots here_
+<img width="423" height="199" alt="image" src="https://github.com/user-attachments/assets/4af002c4-b1e8-4aeb-8641-128d131eb0bb" />
+
+<img width="574" height="297" alt="image" src="https://github.com/user-attachments/assets/a4f2b7a5-ad37-4d8e-810d-423e8ce8d1a2" />
 
 ---
 
-## Attendance System
+## Update Group Data System
 
-_Add screenshots here_
+<img width="610" height="427" alt="image" src="https://github.com/user-attachments/assets/55f9a489-09c2-4f73-b460-57370bd9eef9" />
+
+<img width="587" height="466" alt="image" src="https://github.com/user-attachments/assets/0fb828cf-fada-4895-af1a-7de96c226337" />
+
+---
+
+## Roles Validate System
+
+<img width="834" height="715" alt="image" src="https://github.com/user-attachments/assets/c2cf9701-b371-479e-99d9-e5744a3090b4" />
 
 ---
 
 ## Railway Deployment
 
-_Add screenshots here_
+<img width="1442" height="1045" alt="image" src="https://github.com/user-attachments/assets/4edabdac-eeb2-4653-beab-fde41e0ba314" />
 
 ---
 
