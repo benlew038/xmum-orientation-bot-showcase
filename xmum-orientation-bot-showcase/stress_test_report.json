@@ -1,0 +1,48 @@
+{
+  "users": 50,
+  "logic_tests": [
+    {
+      "test": "duplicate_attendance",
+      "signed": 1,
+      "rejected": 49,
+      "expected_signed": 1,
+      "pass": true
+    },
+    {
+      "test": "coins_race_condition",
+      "final": 5000,
+      "expected": 5000,
+      "pass": true
+    },
+    {
+      "test": "log_buffer_race",
+      "total": 100,
+      "expected": 100,
+      "pass": true
+    },
+    {
+      "test": "auth_cache_stampede",
+      "sheets_reads": 1,
+      "expected": 1,
+      "pass": true
+    },
+    {
+      "test": "write_queue_dedup",
+      "final_value": 2000,
+      "expected": 2000,
+      "pass": true
+    },
+    {
+      "test": "flow_state_isolation",
+      "all_correct": true,
+      "pass": true
+    },
+    {
+      "test": "reset_no_password_leak",
+      "leaks": 0,
+      "expected": 0,
+      "pass": true
+    }
+  ],
+  "api_stats": {}
+}
