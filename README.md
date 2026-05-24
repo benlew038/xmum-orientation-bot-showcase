@@ -275,7 +275,7 @@ python main.py
 
 <img width="483" height="612" alt="image" src="https://github.com/user-attachments/assets/5d452e32-1c6d-4f77-a35b-d0f0f2f00ece" />
 
-<img width="558" height="702" alt="image" src="https://github.com/user-attachments/assets/e7e6e3ea-decc-47db-a99e-5b779f1d7c9c" />
+<img width="488" height="419" alt="image" src="https://github.com/user-attachments/assets/38c410fd-18d3-4190-a3a4-49f9aefb4794" />
 
 ---
 
